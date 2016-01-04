@@ -10,3 +10,6 @@ Planned functionality is as follows:
 - Fileshare?
 - Pictures?
 - GIFs/WEBMs?
+
+## Server..?
+Yes I know this is currently a server implementation. I have changed my goals for the project and will be updating it soon. Please standby.
