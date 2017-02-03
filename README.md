@@ -74,7 +74,7 @@ Do not try to implement a feature without specifying testable and verifiable req
 ## Terms
 These terms are not set in stone, but for the moment I have chosen to use bitTorrent-like terminology to keep things simple
 
-Peer: A participant in the peer to peer network
+Peer: A participant in the peer to peer network  
 Circle: A group of connected peers aka swarm in bitTorrent terms.
 
 ## Contributing
