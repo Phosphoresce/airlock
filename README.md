@@ -13,7 +13,7 @@ Planned functionality is as follows:
 
 ## Overview of Development
 
-1. Connect to peers from direct IP
+1. Connect to peers from direct IP (Ready for development)
   - Connect to a circle
     - If a peer is the first in the circle wait for incoming connections from other peers
     - If a peer is not the first in the circle request to join the circle
@@ -32,18 +32,27 @@ Planned functionality is as follows:
   - Detect peers on your network
     - If a peer hasn't specified a target, try to detect peers on their network
   
-2. Establish encryption from the start
+2. Establish encryption from the start (Partially ready)
+  - Each peer must create an identity key and associate it with their username
   - Each peer creates a public-private keypair
+    - Each peer must establish a strong AES public-private pre-keypair
+    - Each peer must allow other peers to collect their public pre-key
     - X3DH? 
     - Double Ratchet?
-  - Different keys for each chatroom a user participates in
   
-3. Send messages
-  - Message entire group
-  - Message a subset (chat room)
+3. Send messages (Partially ready)
   - Personal message
+    - Peers must send all individual messages to another peer encrypted with the receivers public pre-key
+    - The participating peers must establish a shared key
+    - The participating peers must then communicate with the agreed upon shared key
+  - Message a subset of peers in a chat room (Design validation)
+    - Peers will establish a shared key using subsequent key exchanges e.g. 2 peers would start with an exchange and add a 3rd peer by completing an echange between the initial 2 peers and the new peer.
+      - To complete the exchange to add the nth peer the joining peer will complete an exchange with only a single peer using the current shared key. That contacted peer will broadcast the new shared key, established for the newly added peer, to the remainder of the old shared key users encrypted with the old shared key.
+  - Message entire circle (Still requires design)
+    - It turns out that efficient group key exchanges are a big problem in cryptography. This may cause performance issues with large circles.
+    - The idea here is to keep doing key exchanges, as with the 'message a subset' task, until everybody has a shared key for the global channel. This may be difficult as users will have to constantly generate new keys or update their keys.
   
-4. Collaboration
+4. Collaboration (Still requires design)
   - Links
     - Open in browser
     - Anonymous proxy links
