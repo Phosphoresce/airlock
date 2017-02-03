@@ -74,4 +74,4 @@ If you would like to contribute please send me a pull request.
 Ensure that your code is re-usable if at all possible and that you include tests for all functionality!  
 Remember that security is the heart of this project, so please make sure you are using secure code practices and have the users' safety in mind.
 
-Finally, make sure that you document any changes you've made clearly and concisely in the change log.
+Finally, make sure that you document any changes you've made clearly and concisely in the [change log](http://keepachangelog.com/en/0.3.0/).
