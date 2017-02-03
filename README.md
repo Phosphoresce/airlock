@@ -60,7 +60,7 @@ Planned functionality is as follows:
   
 If something isn't hashed out to the point of testable and verifiable requirements please feel free to submit suggestions in the issues section!  
 
-Do not try to implement a feature without specifying testable and verifiable requirements! I will not except the pull request if you cannot tell me what it is supposed to accomplish and how I am supposed to test and verify it.  
+Do not try to implement a feature without specifying testable and verifiable requirements! I will not accept the pull request if you cannot tell me what it is supposed to accomplish and how I am supposed to test and verify it.  
 
 ## Terms
 These terms are not set in stone, but for the moment I have chosen to use bitTorrent-like terminology to keep things simple
