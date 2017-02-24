@@ -1,18 +1,34 @@
 # Airlock
 Airlock is a secure P2P chat and collaboration platform.
 
-## Design
+## Executive Summary
+Airlock is designed to bring friends, colleagues, and peers together so that they can share experiences, relax, or work on projects together. Airlock is based off of a completely peer to peer design, in which users will need to directly connect to each other to chat, share files, or collaborate on documents. There are no servers involved and chat rooms may be hosted by anybody. In large chat rooms users can send each other personal messages or work on documents with subsets of the connected peers. Airlock also incorporates security from the ground up. Every chat room is encrypted with proven and open source algorithms.  
 
-Planned functionality is as follows:
+Airlock provides a safe way for users to communicate and collaborate. It is designed to protect private matters with encryption between every user in every chat room. Airlock does not collect any information for analysis, and only users who have shared keys can decipher messages from each other. Users can rest assured that their private communications stay private.  
+
+#### Problem Statement
+Privacy is very important to users. Personal communications and personally identifying information should be protected. If personal information lands in the wrong hands, a person may be affected in a number of ways. For example, medical information may prevent a person from getting insurance, or conversations with a friend could offend a person's employer. People deserve to be able to communicate without the worry that their personal information is at risk.  
+
+#### Merit
+Airlock is intended to provide another avenue for private communication without making the process uncomfortable or difficult. The end goal of the Airlock project is to make it easy for users to maintain their privacy while participating in the important aspects of their lives.  
+
+#### Project Goals
+1. Allow users to communicate
+2. Encrypt communications between users and groups of users separately
+3. Allow users to share files, media, and links in a secure manner
+4. Allow users to collaborate on documents or source code without 3rd party sites
+5. Allow users have a secure and modern chat experience on any platform (Web, Desktop, Mobile)
+
+## Overview of Development
+High-level planned functionality is as follows:
 - Chatrooms
 - Links
-- Code collaboration
+- Document and code collaboration
 - File sharing
 - Pictures?
 - GIFs/WEBMs?
 
-## Overview of Development
-
+### Outlined Tasks
 1. Connect to peers from direct IP (Ready for development)
   - Connect to a circle
     - If a peer is the first in the circle wait for incoming connections from other peers
