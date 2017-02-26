@@ -19,6 +19,10 @@ Airlock is intended to provide another avenue for private communication without 
 4. Allow users to collaborate on documents or source code without 3rd party sites
 5. Allow users have a secure and modern chat experience on any platform (Web, Desktop, Mobile)
 
+#### Proposed Project Timeline
+
+![](timeline.png?raw=true)
+
 ## Overview of Development
 High-level planned functionality is as follows:
 - Chatrooms
