@@ -45,24 +45,24 @@ High-level planned functionality is as follows:
 - Pictures?
 - GIFs/WEBMs?
 
-### Outlined Tasks
+### Outlined Tasks and Corresponding User Stories
 1. Connect to peers from direct IP (Ready for development)
-  - Connect to a circle
+  - Connect to a circle #1
     - If a peer is the first in the circle wait for incoming connections from other peers
     - If a peer is not the first in the circle request to join the circle
     - A peer must ask its initial peer for the list of other peers
-  - Record participating peers
+  - Record participating peers #2
     - Each peer should create and maintain a list of other peers in a circle
     - After obtaining a list of peers each peer should announce their connection to the circle they are connecting to
     - Each peer should send their list of peers to another peer upon request 
-  - Usernames
+  - Usernames #3
     - Each peer will request a username from its initial peer
     - The initial peer must only allow a new peer to connect if a requested username is not in use
-  - Remove peers after timeout/disconnect
+  - Remove peers after timeout/disconnect #3
     - Each peer will send a keep-alive every specified interval
     - Each peer must remove other inactive peers
     - Each peer will broadcast a disconnect voluntarily leaving
-  - Detect peers on your network
+  - Detect peers on your network #4
     - If a peer hasn't specified a target, try to detect peers on their network
   
 2. Establish encryption from the start (Partially ready)
