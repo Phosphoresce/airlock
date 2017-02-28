@@ -19,9 +19,26 @@ Airlock is intended to provide another avenue for private communication without 
 4. Allow users to collaborate on documents or source code without 3rd party sites
 5. Allow users have a secure and modern chat experience on any platform (Web, Desktop, Mobile)
 
-#### Proposed Project Timeline
-
 ![](timeline.png?raw=true)
+
+#### Risk List
+| Risk Name | Value | Impact | Likelihood |Description |
+|---|---:|---:|---:|---|
+| Wrong Language | 8 | 8 | 1 | Go may turn out to be the wrong language for the job. |
+| Outatime | 36 | 9 | 4 | I could have bitten off more than I could chew in the alotted time frame. |
+| Wrong Skillset | 15 | 5 | 3 | I may not have the skills to complete parts of the project within the given parameters. |
+| Sickness | 10 | 5 | 2 | I am a single point of failure since I am the only person developing this project. |
+| Bugs | 9 | 1 | 9 | Bugs in the code are somewhat expected even after testing. |
+
+I have already mitigated the possibility of Go being an incorrect language by learning it and using it for several other projects.  
+
+I plan to monitor my time tables and I have partially mitigated time issues by creating a tentative schedule.  
+
+I have the correct skillset for the project barring UI/UX design. I can mitigate this by learning what I can and utilizing well known frameworks.  
+
+I accept the risk of illness, I typically wouldn't be able to do anything to mitigate it.  
+
+I can mitigate the risk of bugs by testing thoroughly and completely. 
 
 ## Overview of Development
 High-level planned functionality is as follows:
