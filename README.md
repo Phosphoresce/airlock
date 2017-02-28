@@ -34,18 +34,17 @@ Airlock is intended to provide another avenue for private communication without 
 2. I plan to monitor my time tables and I have partially mitigated time issues by creating a tentative schedule.  
 3. I have the correct skillset for the project barring UI/UX design. I can mitigate this by learning what I can and utilizing well known frameworks.  
 4. I accept the risk of illness, I typically wouldn't be able to do anything to mitigate it.  
-5. I can mitigate the risk of bugs by testing thoroughly and completely. 
+5. I can mitigate the risk of bugs by testing thoroughly and completely.  
 
-## Overview of Development
-High-level planned functionality is as follows:
-- Chatrooms
-- Links
-- Document and code collaboration
-- File sharing
-- Pictures?
-- GIFs/WEBMs?
+## Application Requirements
 
-### Outlined Tasks and Corresponding User Stories
+Below is an outline of in-progress user stories and a link to a use/misuse case diagram. Both of these items will evolve throughout the development of the project.  
+
+If something isn't hashed out to the point of testable and verifiable requirements please feel free to submit suggestions in the issues section!  
+
+Do not try to implement a feature without specifying testable and verifiable requirements! I will not accept the pull request if you cannot tell me what it is supposed to accomplish and how I am supposed to test and verify it.
+
+#### User Stories
 1. Connect to peers from direct IP (Ready for development)
   - Connect to a circle ([#1](https://github.com/Phosphoresce/airlock/issues/1))
     - If a peer is the first in the circle wait for incoming connections from other peers
@@ -98,11 +97,17 @@ High-level planned functionality is as follows:
 5. UI/UX
   - Terminal
   - GUI
-  - web app
+  - web app  
   
-If something isn't hashed out to the point of testable and verifiable requirements please feel free to submit suggestions in the issues section!  
+#### Use Case Diagram
 
-Do not try to implement a feature without specifying testable and verifiable requirements! I will not accept the pull request if you cannot tell me what it is supposed to accomplish and how I am supposed to test and verify it.  
+Go [here](https://www.lucidchart.com/invitations/accept/10e89bdf-b0f9-4b3d-81b2-e387545c307b) to view the use case diagram.
+
+## Resources Required
+| Resource | Dr. Hale needed? | Investigating Team member | Description |
+|---|---|---|---|
+| Distributed encryption research | no | Me | Need some whitepapers and research for distributed peer2peer encryption |
+| UI/UX Experience | no | Me | Will need to look into UI frameworks, and decide on ways to present this application to users |
 
 ## Terms
 These terms are not set in stone, but for the moment I have chosen to use bitTorrent-like terminology to keep things simple
