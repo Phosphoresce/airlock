@@ -1,35 +1,67 @@
 # Airlock
 Airlock is a secure P2P chat and collaboration platform.
 
-## Design
+## Executive Summary
+Airlock is designed to bring friends, colleagues, and peers together so that they can share experiences, relax, or work on projects together. Airlock is based off of a completely peer to peer design, in which users will need to directly connect to each other to chat, share files, or collaborate on documents. There are no servers involved and chat rooms may be hosted by anybody. In large chat rooms users can send each other personal messages or work on documents with subsets of the connected peers. Airlock also incorporates security from the ground up. Every chat room is encrypted with proven and open source algorithms.  
 
-Planned functionality is as follows:
-- Chatrooms
-- Links
-- Code collaboration
-- File sharing
-- Pictures?
-- GIFs/WEBMs?
+Airlock provides a safe way for users to communicate and collaborate. It is designed to protect private matters with encryption between every user in every chat room. Airlock does not collect any information for analysis, and only users who have shared keys can decipher messages from each other. Users can rest assured that their private communications stay private.  
 
-## Overview of Development
+#### Problem Statement
+Privacy is very important to users. Personal communications and personally identifying information should be protected. If personal information lands in the wrong hands, a person may be affected in a number of ways. For example, medical information may prevent a person from getting insurance, or conversations with a friend could offend a person's employer. People deserve to be able to communicate without the worry that their personal information is at risk.  
 
+#### Merit
+Airlock is intended to provide another avenue for private communication without making the process uncomfortable or difficult. The end goal of the Airlock project is to make it easy for users to maintain their privacy while participating in the important aspects of their lives.  
+
+#### Project Goals
+1. Allow users to communicate
+2. Encrypt communications between users and groups of users separately
+3. Allow users to share files, media, and links in a secure manner
+4. Allow users to collaborate on documents or source code without 3rd party sites
+5. Allow users have a secure and modern chat experience on any platform (Web, Desktop, Mobile)
+
+![](timeline.png?raw=true)
+
+#### Risk List
+| Risk Name | Value | Impact | Likelihood | Description |
+|---|---:|---:|---:|---|
+| Wrong Language | 8 | 8 | 1 | Go may turn out to be the wrong language for the job. |
+| Outatime | 36 | 9 | 4 | I could have bitten off more than I could chew in the alotted time frame. |
+| Wrong Skillset | 15 | 5 | 3 | I may not have the skills to complete parts of the project within the given parameters. |
+| Sickness | 10 | 5 | 2 | I am a single point of failure since I am the only person developing this project. |
+| Bugs | 9 | 1 | 9 | Bugs in the code are somewhat expected even after testing. |
+
+1. I have already mitigated the possibility of Go being an incorrect language by learning it and using it for several other projects.  
+2. I plan to monitor my time tables and I have partially mitigated time issues by creating a tentative schedule.  
+3. I have the correct skillset for the project barring UI/UX design. I can mitigate this by learning what I can and utilizing well known frameworks.  
+4. I accept the risk of illness, I typically wouldn't be able to do anything to mitigate it.  
+5. I can mitigate the risk of bugs by testing thoroughly and completely.  
+
+## Application Requirements
+
+Below is an outline of in-progress user stories and a link to a use/misuse case diagram. Both of these items will evolve throughout the development of the project.  
+
+If something isn't hashed out to the point of testable and verifiable requirements please feel free to submit suggestions in the issues section!  
+
+Do not try to implement a feature without specifying testable and verifiable requirements! I will not accept the pull request if you cannot tell me what it is supposed to accomplish and how I am supposed to test and verify it.
+
+#### User Stories
 1. Connect to peers from direct IP (Ready for development)
-  - Connect to a circle
+  - Connect to a circle ([#1](https://github.com/Phosphoresce/airlock/issues/1))
     - If a peer is the first in the circle wait for incoming connections from other peers
     - If a peer is not the first in the circle request to join the circle
     - A peer must ask its initial peer for the list of other peers
-  - Record participating peers
+  - Record participating peers ([#2](https://github.com/Phosphoresce/airlock/issues/2))
     - Each peer should create and maintain a list of other peers in a circle
     - After obtaining a list of peers each peer should announce their connection to the circle they are connecting to
     - Each peer should send their list of peers to another peer upon request 
-  - Usernames
+  - Usernames ([#3](https://github.com/Phosphoresce/airlock/issues/3))
     - Each peer will request a username from its initial peer
     - The initial peer must only allow a new peer to connect if a requested username is not in use
-  - Remove peers after timeout/disconnect
+  - Remove peers after timeout/disconnect ([#4](https://github.com/Phosphoresce/airlock/issues/4))
     - Each peer will send a keep-alive every specified interval
     - Each peer must remove other inactive peers
     - Each peer will broadcast a disconnect voluntarily leaving
-  - Detect peers on your network
+  - Detect peers on your network ([#5](https://github.com/Phosphoresce/airlock/issues/5))
     - If a peer hasn't specified a target, try to detect peers on their network
   
 2. Establish encryption from the start (Partially ready)
@@ -65,11 +97,17 @@ Planned functionality is as follows:
 5. UI/UX
   - Terminal
   - GUI
-  - web app
+  - web app  
   
-If something isn't hashed out to the point of testable and verifiable requirements please feel free to submit suggestions in the issues section!  
+#### Use Case Diagram
 
-Do not try to implement a feature without specifying testable and verifiable requirements! I will not accept the pull request if you cannot tell me what it is supposed to accomplish and how I am supposed to test and verify it.  
+Go [here](https://www.lucidchart.com/invitations/accept/10e89bdf-b0f9-4b3d-81b2-e387545c307b) to view the use case diagram.
+
+## Resources Required
+| Resource | Dr. Hale needed? | Investigating Team member | Description |
+|---|---|---|---|
+| Distributed encryption research | no | Me | Need some whitepapers and research for distributed peer2peer encryption |
+| UI/UX Experience | no | Me | Will need to look into UI frameworks, and decide on ways to present this application to users |
 
 ## Terms
 These terms are not set in stone, but for the moment I have chosen to use bitTorrent-like terminology to keep things simple
