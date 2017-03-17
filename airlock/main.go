@@ -5,12 +5,34 @@ import "fmt"
 import "net"
 import "log"
 
-func main() {
-	fmt.Println("Hello, Airlock!")
-	initialize()
+type circle struct {
+	peers []*peer
+	name string
 }
 
-func initialize() {
+func newCircle(peers []*peer, name string) *circle { return &circle{peers, name} }
+
+type peer struct {
+	addr *net.UDPAddr
+}
+
+func newPeer(ip string, port int) *peer {
+	return &peer{
+		addr: &net.UDPAddr{
+			IP:   net.ParseIP(ip),
+			Port: port,
+		},
+	}
+}
+
+func main() {
+	fmt.Println("Hello, Airlock!")
+
+	p := make([]*peer, 1)
+	// peer[0] will always be the local peer
+	p[0] = newPeer("127.0.0.1", 9001)
+	c := newCircle(p, "local")
+
 	// process args
 	var target string = ""
 	args := os.Args[1:]
@@ -21,23 +43,17 @@ func initialize() {
 			x++
 		}
 	}
+
 	// connecting to peer or creating circle?
 	if target != "" {
 		connect(target)
-	} else {
-		listen()
 	}
-	// if connecting to peer dial ip / dns name
-
-	// if starting new circle host listen on specified port
+	listen(c.peers[0])
 }
 
-func listen() {
-	addr := net.UDPAddr{
-		Port: 9001,
-		IP:   net.ParseIP("127.0.0.1"), // * to listen from anywhere
-	}
-	listener, err := net.ListenUDP("udp", &addr)
+// incoming connections should create a new peer
+func listen(local *peer) {
+	listener, err := net.ListenUDP("udp", local.addr)
 
 	if err != nil {
 		log.Fatal("Failed to create listener: ", err)
@@ -55,6 +71,7 @@ func listen() {
 	listener.Write(response)
 }
 
+// outgoing connections should create a new peer
 func connect(target string) {
 	client, err :=  net.Dial("udp", target)
 	if err != nil {
