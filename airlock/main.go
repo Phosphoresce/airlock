@@ -4,6 +4,7 @@ import "os"
 import "fmt"
 import "net"
 import "log"
+import "strings"
 import "strconv"
 import "bufio"
 
@@ -56,13 +57,17 @@ func main() {
 
 	// connecting to peer?
 	if target != "" {
-		connect(target)
+		targetAddr := strings.Split(target, ":")
+		targetPort, _ := strconv.Atoi(targetAddr[len(targetAddr)-1])
+		c.peers = append(c.peers, newPeer(targetAddr[0], targetPort))
+		connect(c)
 	}
+
 	go listen(c)
 	chat(c)
 }
 
-// incoming connections should create a new peer
+// incoming connections should create a new peer and send an updated peer list
 func listen(c *circle) {
 	listener, err := net.ListenUDP("udp", c.peers[0].addr)
 	if err != nil {
@@ -78,11 +83,25 @@ func listen(c *circle) {
 		} else {
 			fmt.Printf("received: %v bytes from %v.\nmessage: %s\n", rlen, remote, buff)
 
+			// this response should be a list of ips and ports for all peers BESIDES the currently connected peer and the local peer
+			// can avoid appending the connected peer to the list until after we have sent the peer list barring peer[0]
+			// build the peer list
+			fmt.Println(c.peers)
+			if len(c.peers) > 1 {
+				peerlist := make([]string, 0)
+				for _, peer := range c.peers[1:] {
+					peerlist = append(peerlist, peer.addr.String())
+				}
+
+				fmt.Printf("peerlist: %s\n", strings.Join(peerlist, ","))
+				listener.WriteTo([]byte(strings.Join(peerlist, ",")), remote)
+			} else {
+				listener.WriteTo([]byte("nil"), remote)
+			}
+
 			// TODO: is remote already a peer? if not add it as a peer
 			c.peers = append(c.peers, &peer{addr: remote})
 
-			response := []byte("Hello Client")
-			listener.Write(response)
 		}
 	}
 }
@@ -95,9 +114,10 @@ func chat(c *circle) {
 	}
 }
 
-// outgoing connections should create a new peer
-func connect(target string) {
-	client, err := net.Dial("udp", target)
+// outgoing connections should create a new peer from specified target and receive target's peer list
+func connect(c *circle) {
+	client, err := net.DialUDP("udp", nil, c.peers[1].addr)
+
 	if err != nil {
 		log.Fatal("Failed to dial target: ", err)
 	}
@@ -107,4 +127,10 @@ func connect(target string) {
 	if err != nil {
 		log.Print("Failed to send: ", err)
 	}
+
+	// receive list of peers
+	var readbuff [1024]byte
+	client.Read(readbuff[:])
+	// save peers to own circle
+	fmt.Printf("received peerlist: %s\n", readbuff)
 }
