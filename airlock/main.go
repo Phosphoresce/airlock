@@ -100,8 +100,8 @@ func listen(c *circle) {
 			}
 
 			// TODO: is remote already a peer? if not add it as a peer
-			c.peers = append(c.peers, &peer{addr: remote})
-
+			remotePort, _ := strconv.Atoi(string(buff[:rlen]))
+			c.peers = append(c.peers, newPeer(remote.IP.String(), remotePort))
 		}
 	}
 }
@@ -117,12 +117,13 @@ func chat(c *circle) {
 // outgoing connections should create a new peer from specified target and receive target's peer list
 func connect(c *circle) {
 	client, err := net.DialUDP("udp", nil, c.peers[1].addr)
-
 	if err != nil {
 		log.Fatal("Failed to dial target: ", err)
 	}
+	defer client.Close()
 
-	buff := []byte("Hello Server")
+	// TODO: Send port number this client will listen on.
+	buff := []byte(strconv.Itoa(c.peers[0].addr.Port))
 	_, err = client.Write(buff)
 	if err != nil {
 		log.Print("Failed to send: ", err)
@@ -130,7 +131,16 @@ func connect(c *circle) {
 
 	// receive list of peers
 	var readbuff [1024]byte
-	client.Read(readbuff[:])
+	n, _ := client.Read(readbuff[:])
+
 	// save peers to own circle
-	fmt.Printf("received peerlist: %s\n", readbuff)
+	fmt.Printf("received peerlist: '%s' %v bytes\n", string(readbuff[:n]), len(readbuff[:n]))
+	if string(readbuff[:n]) != "nil" {
+		peerlist := strings.Split(string(readbuff[:n]), ",")
+		for _, peer := range peerlist {
+			peerAddr := strings.Split(peer, ":")
+			peerPort, _ := strconv.Atoi(peerAddr[len(peerAddr)-1])
+			c.peers = append(c.peers, newPeer(peerAddr[0], peerPort))
+		}
+	}
 }
