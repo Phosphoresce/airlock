@@ -17,6 +17,7 @@ func newCircle(peers []*peer, name string) *circle { return &circle{peers, name}
 
 type peer struct {
 	addr *net.UDPAddr
+	name string
 }
 
 func newPeer(ip string, port int) *peer {
@@ -32,7 +33,7 @@ func main() {
 	fmt.Println("Hello, Airlock!")
 
 	// default config values
-	var target string
+	var target, username string
 	port := 9001
 
 	// process args
@@ -45,6 +46,9 @@ func main() {
 		case "-p", "--port":
 			port, _ = strconv.Atoi(args[x+1])
 			x++
+		case "-u", "--username":
+			username = args[x+1]
+			x++
 		}
 	}
 
@@ -54,6 +58,7 @@ func main() {
 	// peer[0] will always be the local peer
 	p[0] = newPeer("127.0.0.1", port)
 	c := newCircle(p, "local")
+	c.peers[0].name = username
 
 	// connecting to peer?
 	if target != "" {
@@ -108,7 +113,6 @@ func listen(c *circle) {
 					c.peers = append(c.peers, newPeer(remote.IP.String(), remotePort))
 				}
 			}
-
 		}
 	}
 }
@@ -167,7 +171,7 @@ func chat(c *circle) {
 		buffer := scanner.Text()
 		for _, peer := range c.peers[1:] {
 			client, _ := net.DialUDP("udp", nil, peer.addr)
-			client.Write([]byte("> " + buffer))
+			client.Write([]byte(c.peers[0].name + " > " + buffer))
 			client.Close()
 		}
 	}
