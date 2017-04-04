@@ -105,7 +105,7 @@ Go [here](https://www.lucidchart.com/invitations/accept/10e89bdf-b0f9-4b3d-81b2-
 
 #### Architectural Diagram
 
-Go [here]() to view the architectural diagram.
+Go [here](https://www.lucidchart.com/invitations/accept/fb951839-3a90-4375-aa8c-ccd46285cc09) to view the architectural diagram.
 
 The components depicted in the architectural diagram are split into two main systems.  
 
