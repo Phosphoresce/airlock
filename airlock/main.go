@@ -88,6 +88,20 @@ func listen(c *circle) {
 		} else {
 			if strings.Contains(string(buff[:rlen]), ">") {
 				fmt.Printf("%v %s\n", remote.IP.String(), buff)
+
+				// parse system commands
+			} else if strings.Contains(string(buff[:rlen]), "/quit") {
+				// remove peer from list
+				readbuff := strings.Split(string(buff[:rlen]), ",")
+				fmt.Println(readbuff)
+				remotePort, _ := strconv.Atoi(readbuff[len(readbuff)-1])
+
+				i := peerExists(c, remote.IP.String(), remotePort)
+				if i != -1 {
+					copy(c.peers[i:], c.peers[i+1:])
+					c.peers[len(c.peers)-1] = nil
+					c.peers = c.peers[:len(c.peers)-1]
+				}
 			} else {
 				fmt.Printf("New connect from %v\n", remote)
 				// this response should be a list of ips and ports for all peers BESIDES the currently connected peer and the local peer
@@ -154,6 +168,7 @@ func connect(c *circle) {
 	}
 }
 
+// check for peer in peerlist
 func peerExists(c *circle, ip string, port int) int {
 	fmt.Printf("checking for %v:%v\n", ip, port)
 	for i, peer := range c.peers {
@@ -171,8 +186,17 @@ func chat(c *circle) {
 		buffer := scanner.Text()
 		for _, peer := range c.peers[1:] {
 			client, _ := net.DialUDP("udp", nil, peer.addr)
-			client.Write([]byte(c.peers[0].name + " > " + buffer))
+			if strings.Contains(string(buffer), "/quit") {
+				// send quit command instead of text
+				// TODO: we are not correctly sending the port
+				client.Write([]byte("/quit," + string(c.peers[0].addr.Port)))
+			} else {
+				client.Write([]byte(c.peers[0].name + " > " + buffer))
+			}
 			client.Close()
+		}
+		if strings.Contains(string(buffer), "/quit") {
+			return
 		}
 	}
 }
