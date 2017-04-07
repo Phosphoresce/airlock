@@ -81,7 +81,6 @@ func main() {
 
 	// connecting to peer?
 	if target != "" {
-		// TODO: resolve dns name
 		targetAddr := strings.Split(target, ":")
 		targetPort, _ := strconv.Atoi(targetAddr[len(targetAddr)-1])
 		c.peers = append(c.peers, newPeer(targetAddr[0], targetPort))
@@ -229,12 +228,12 @@ func (c *circle) chat() {
 			if strings.Contains(string(buffer), "/quit") {
 				// send quit command instead of text
 				port := strconv.Itoa(c.peers[0].addr.Port)
-				if !isIdle(peer) {
+				if !peer.isIdle() {
 					// TODO: update to send message struct with userid instead of port
 					client.Write([]byte("/quit," + port))
 				}
 			} else {
-				if !isIdle(peer) {
+				if !peer.isIdle() {
 					client.Write([]byte(c.peers[0].name + " > " + buffer))
 				}
 			}
@@ -246,10 +245,10 @@ func (c *circle) chat() {
 	}
 }
 
-func isIdle(peer *peer) bool {
+func (p *peer) isIdle() bool {
 	// before I send to anybody I need to make sure they are not idle
 	// essentially means peer.time - time.Now() < 10 minutes
-	return time.Since(peer.time) > (10 * time.Minute)
+	return time.Since(p.time) > (10 * time.Minute)
 }
 
 func (c *circle) heartbeat() {
