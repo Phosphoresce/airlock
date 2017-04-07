@@ -4,6 +4,7 @@ import "os"
 import "fmt"
 import "net"
 import "log"
+import "time"
 import "strings"
 import "strconv"
 import "bufio"
@@ -18,6 +19,7 @@ func newCircle(peers []*peer, name string) *circle { return &circle{peers, name}
 type peer struct {
 	addr *net.UDPAddr
 	name string
+	time time.Time
 }
 
 func newPeer(ip string, port int) *peer {
@@ -26,6 +28,7 @@ func newPeer(ip string, port int) *peer {
 			IP:   net.ParseIP(ip),
 			Port: port,
 		},
+		time: time.Now(),
 	}
 }
 
@@ -93,7 +96,6 @@ func listen(c *circle) {
 			} else if strings.Contains(string(buff[:rlen]), "/quit") {
 				// remove peer from list
 				readbuff := strings.Split(string(buff[:rlen]), ",")
-				fmt.Println(readbuff)
 				remotePort, _ := strconv.Atoi(readbuff[len(readbuff)-1])
 
 				i := peerExists(c, remote.IP.String(), remotePort)
@@ -101,6 +103,18 @@ func listen(c *circle) {
 					copy(c.peers[i:], c.peers[i+1:])
 					c.peers[len(c.peers)-1] = nil
 					c.peers = c.peers[:len(c.peers)-1]
+				}
+			} else if strings.Contains(string(buff[:rlen]), "/heartbeat") {
+				// stop the peer from being removed
+				fmt.Println("processing heartbeat")
+				readbuff := strings.Split(string(buff[:rlen]), ",")
+				remotePort, _ := strconv.Atoi(readbuff[len(readbuff)-1])
+
+				j := peerExists(c, remote.IP.String(), remotePort)
+				if j != -1 {
+					// reset some timeout value
+					c.peers[j].time = time.Now()
+					fmt.Printf("time set to: %v\n", c.peers[j].time)
 				}
 			} else {
 				fmt.Printf("New connect from %v\n", remote)
@@ -166,6 +180,7 @@ func connect(c *circle) {
 			}
 		}
 	}
+	go heartbeat(c)
 }
 
 // check for peer in peerlist
@@ -188,15 +203,39 @@ func chat(c *circle) {
 			client, _ := net.DialUDP("udp", nil, peer.addr)
 			if strings.Contains(string(buffer), "/quit") {
 				// send quit command instead of text
-				// TODO: we are not correctly sending the port
-				client.Write([]byte("/quit," + string(c.peers[0].addr.Port)))
+				port := strconv.Itoa(c.peers[0].addr.Port)
+				if !isIdle(peer) {
+					client.Write([]byte("/quit," + port))
+				}
 			} else {
-				client.Write([]byte(c.peers[0].name + " > " + buffer))
+				if !isIdle(peer) {
+					client.Write([]byte(c.peers[0].name + " > " + buffer))
+				}
 			}
 			client.Close()
 		}
 		if strings.Contains(string(buffer), "/quit") {
 			return
 		}
+	}
+}
+
+func isIdle(peer *peer) bool {
+	// before I send to anybody I need to make sure they are not idle
+	// essentially means peer.time - time.Now() < 10 minutes
+	return time.Since(peer.time) > (10 * time.Minute)
+}
+
+func heartbeat(c *circle) {
+	// want to send a control message at a designated interval
+	// timer 5 minutes
+	for {
+		for _, peer := range c.peers[1:] {
+			client, _ := net.DialUDP("udp", nil, peer.addr)
+			port := strconv.Itoa(c.peers[0].addr.Port)
+			client.Write([]byte("/heartbeat," + port))
+			client.Close()
+		}
+		time.Sleep(5 * time.Minute)
 	}
 }
