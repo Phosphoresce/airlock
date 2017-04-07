@@ -5,6 +5,8 @@ import "fmt"
 import "net"
 import "log"
 import "time"
+import "crypto/sha256"
+import "encoding/base64"
 import "strings"
 import "strconv"
 import "bufio"
@@ -17,9 +19,12 @@ type circle struct {
 func newCircle(peers []*peer, name string) *circle { return &circle{peers, name} }
 
 type peer struct {
-	addr *net.UDPAddr
 	name string
+	addr *net.UDPAddr
 	time time.Time
+	// TODO: save udp client here
+	client *net.UDPConn
+	userid string
 }
 
 func newPeer(ip string, port int) *peer {
@@ -29,7 +34,17 @@ func newPeer(ip string, port int) *peer {
 			Port: port,
 		},
 		time: time.Now(),
+		userid: func() string {
+			id := sha256.Sum256([]byte(time.Now().String()))
+			return base64.URLEncoding.EncodeToString(id[:])
+		}(),
 	}
+}
+
+type message struct {
+	userid  string
+	cmdflag bool
+	body    string
 }
 
 func main() {
@@ -60,23 +75,25 @@ func main() {
 
 	// peer[0] will always be the local peer
 	p[0] = newPeer("127.0.0.1", port)
+	fmt.Printf("userid: %v\n", p[0].userid[:8])
 	c := newCircle(p, "local")
 	c.peers[0].name = username
 
 	// connecting to peer?
 	if target != "" {
+		// TODO: resolve dns name
 		targetAddr := strings.Split(target, ":")
 		targetPort, _ := strconv.Atoi(targetAddr[len(targetAddr)-1])
 		c.peers = append(c.peers, newPeer(targetAddr[0], targetPort))
-		connect(c)
+		c.connect()
 	}
 
-	go listen(c)
-	chat(c)
+	go c.listen()
+	c.chat()
 }
 
 // incoming connections should create a new peer and send an updated peer list
-func listen(c *circle) {
+func (c *circle) listen() {
 	listener, err := net.ListenUDP("udp", c.peers[0].addr)
 	if err != nil {
 		log.Fatal("Failed to create listener: ", err)
@@ -89,33 +106,13 @@ func listen(c *circle) {
 		if err != nil {
 			log.Print("Failed to read from socket: ", err)
 		} else {
-			if strings.Contains(string(buff[:rlen]), ">") {
+			message := string(buff[:rlen])
+			if strings.Contains(message, ">") {
 				fmt.Printf("%v %s\n", remote.IP.String(), buff)
 
 				// parse system commands
-			} else if strings.Contains(string(buff[:rlen]), "/quit") {
-				// remove peer from list
-				readbuff := strings.Split(string(buff[:rlen]), ",")
-				remotePort, _ := strconv.Atoi(readbuff[len(readbuff)-1])
-
-				i := peerExists(c, remote.IP.String(), remotePort)
-				if i != -1 {
-					copy(c.peers[i:], c.peers[i+1:])
-					c.peers[len(c.peers)-1] = nil
-					c.peers = c.peers[:len(c.peers)-1]
-				}
-			} else if strings.Contains(string(buff[:rlen]), "/heartbeat") {
-				// stop the peer from being removed
-				fmt.Println("processing heartbeat")
-				readbuff := strings.Split(string(buff[:rlen]), ",")
-				remotePort, _ := strconv.Atoi(readbuff[len(readbuff)-1])
-
-				j := peerExists(c, remote.IP.String(), remotePort)
-				if j != -1 {
-					// reset some timeout value
-					c.peers[j].time = time.Now()
-					fmt.Printf("time set to: %v\n", c.peers[j].time)
-				}
+			} else if strings.HasPrefix(message, "/") {
+				c.cmdEngine(remote, message)
 			} else {
 				fmt.Printf("New connect from %v\n", remote)
 				// this response should be a list of ips and ports for all peers BESIDES the currently connected peer and the local peer
@@ -135,7 +132,7 @@ func listen(c *circle) {
 				}
 
 				// is remote already a peer? if not add it as a peer
-				remotePort, _ := strconv.Atoi(string(buff[:rlen]))
+				remotePort, _ := strconv.Atoi(message)
 
 				if peerExists(c, remote.IP.String(), remotePort) == -1 {
 					c.peers = append(c.peers, newPeer(remote.IP.String(), remotePort))
@@ -145,8 +142,36 @@ func listen(c *circle) {
 	}
 }
 
+func (c *circle) cmdEngine(remote *net.UDPAddr, message string) {
+	switch {
+	case strings.Contains(message, "quit"):
+		readbuff := strings.Split(message, ",")
+		remotePort, _ := strconv.Atoi(readbuff[len(readbuff)-1])
+
+		i := peerExists(c, remote.IP.String(), remotePort)
+		if i != -1 {
+			copy(c.peers[i:], c.peers[i+1:])
+			c.peers[len(c.peers)-1] = nil
+			c.peers = c.peers[:len(c.peers)-1]
+		}
+
+	case strings.Contains(message, "heartbeat"):
+		// stop the peer from being removed
+		fmt.Println("processing heartbeat")
+		readbuff := strings.Split(message, ",")
+		remotePort, _ := strconv.Atoi(readbuff[len(readbuff)-1])
+
+		j := peerExists(c, remote.IP.String(), remotePort)
+		if j != -1 {
+			// reset some timeout value
+			c.peers[j].time = time.Now()
+			fmt.Printf("time set to: %v\n", c.peers[j].time)
+		}
+	}
+}
+
 // outgoing connections should create a new peer from specified target and receive target's peer list
-func connect(c *circle) {
+func (c *circle) connect() {
 	client, err := net.DialUDP("udp", nil, c.peers[1].addr)
 	if err != nil {
 		log.Fatal("Failed to dial target: ", err)
@@ -180,7 +205,7 @@ func connect(c *circle) {
 			}
 		}
 	}
-	go heartbeat(c)
+	go c.heartbeat()
 }
 
 // check for peer in peerlist
@@ -195,7 +220,7 @@ func peerExists(c *circle, ip string, port int) int {
 }
 
 // Send a message to all peers besides self
-func chat(c *circle) {
+func (c *circle) chat() {
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
 		buffer := scanner.Text()
@@ -205,6 +230,7 @@ func chat(c *circle) {
 				// send quit command instead of text
 				port := strconv.Itoa(c.peers[0].addr.Port)
 				if !isIdle(peer) {
+					// TODO: update to send message struct with userid instead of port
 					client.Write([]byte("/quit," + port))
 				}
 			} else {
@@ -226,7 +252,7 @@ func isIdle(peer *peer) bool {
 	return time.Since(peer.time) > (10 * time.Minute)
 }
 
-func heartbeat(c *circle) {
+func (c *circle) heartbeat() {
 	// want to send a control message at a designated interval
 	// timer 5 minutes
 	for {
