@@ -142,6 +142,7 @@ func (c *circle) listen() {
 		} else {
 			// create struct with string from []byte buffer with length specified by the length of data sent to the udp listener
 			msg := newMessage(string(buff[:rlen]))
+			fmt.Printf("recieved userid: %v\n", msg.userid)
 
 			// decide if the message is a chat message, or command to be processed by the system
 			flag, _ := strconv.ParseBool(msg.cmdflag)
@@ -161,11 +162,12 @@ func (c *circle) cmdEngine(msg *message, rlen int, remote *net.UDPAddr, listener
 	switch {
 	case strings.Contains(msg.body, "quit"):
 		// quit
-		fmt.Println("quitting...")
+		fmt.Println("peer quitting...")
 
 		// remove peer if it exists
 		i := c.peerExists(msg.userid)
 		if i != -1 {
+			fmt.Println("removing peer")
 			copy(c.peers[i:], c.peers[i+1:])
 			c.peers[len(c.peers)-1] = nil
 			c.peers = c.peers[:len(c.peers)-1]
@@ -208,7 +210,7 @@ func (c *circle) cmdEngine(msg *message, rlen int, remote *net.UDPAddr, listener
 
 		// check if the peer exists before adding it to the circle
 		if c.peerExists(msg.userid) == -1 {
-			c.peers = append(c.peers, newPeer(remote.IP.String(), remotePort))
+			c.peers = append(c.peers, addPeer(msg.userid, remote.IP.String(), remotePort))
 		}
 	}
 }
