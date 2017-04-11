@@ -107,7 +107,7 @@ func (c *circle) listen() {
 		} else {
 			message := string(buff[:rlen])
 			if strings.Contains(message, ">") {
-				fmt.Printf("%v %s\n", remote.IP.String(), buff)
+				fmt.Printf("%v %s\n", remote.IP.String(), message)
 
 				// parse system commands
 			} else if strings.HasPrefix(message, "/") {
@@ -234,7 +234,13 @@ func (c *circle) chat() {
 				}
 			} else {
 				if !peer.isIdle() {
-					client.Write([]byte(c.peers[0].name + " > " + buffer))
+					var user string
+					if c.peers[0].name == "" {
+						user = c.peers[0].userid
+					} else {
+						user = c.peers[0].name
+					}
+					client.Write([]byte(user + " > " + buffer))
 				}
 			}
 			client.Close()
