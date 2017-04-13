@@ -200,6 +200,7 @@ func (c *circle) cmdEngine(msg *message, remote *net.UDPAddr, listener *net.UDPC
 
 			// grab all peers besides the local peer
 			for _, peer := range c.peers[1:] {
+				// TODO: need to add the userid AND the address when sending to new connect
 				peerlist = append(peerlist, peer.addr.String())
 			}
 
@@ -221,6 +222,7 @@ func (c *circle) cmdEngine(msg *message, remote *net.UDPAddr, listener *net.UDPC
 		} else {
 			fmt.Println("sending offline messages")
 			// convert c.msgs in strings
+			// TODO: this executes but the receiving end doesn't get anything. is the client correct?? is the message correct? should probably print these out to make sure
 			client, _ := net.DialUDP("udp", nil, c.peers[index].addr)
 			for _, item := range c.msgs {
 				// send them missed messages
@@ -264,6 +266,7 @@ func (c *circle) connect() {
 			peerPort, _ := strconv.Atoi(peerAddr[len(peerAddr)-1])
 
 			// if peer doesn't exist add it
+			// TODO: this line is incorrect peerExists() takes a userid as a search parameter. This if will always execute
 			if c.peerExists(peerAddr[0]) == -1 {
 				c.peers = append(c.peers, addPeer(peerAddr[0], peerAddr[1], peerPort))
 
