@@ -13,13 +13,13 @@ import "bufio"
 
 type circle struct {
 	peers []*peer
+	msgs  []*message
 	name  string
 }
 
-func newCircle(peers []*peer, name string) *circle { return &circle{peers, name} }
+func newCircle(peers []*peer, msgs []*message, name string) *circle { return &circle{peers, msgs, name} }
 
 type peer struct {
-	name string
 	addr *net.UDPAddr
 	time time.Time
 	// TODO: save udp client here
@@ -59,7 +59,7 @@ type message struct {
 }
 
 func newMessage(buffer string) *message {
-	msg := strings.Split(buffer, dilimeter)
+	msg := strings.Split(buffer, delimiter)
 	return &message{
 		userid:  msg[0],
 		cmdflag: msg[1],
@@ -67,13 +67,14 @@ func newMessage(buffer string) *message {
 	}
 }
 
-const dilimeter = "\x1f"
+const delimiter = "\x1f"
 
 func main() {
 	fmt.Println("Hello, Airlock!")
 
 	// default config values
-	var target, username string
+	var target string
+	username := ""
 	port := 9001
 
 	// process args
@@ -94,14 +95,17 @@ func main() {
 
 	// create structs
 	p := make([]*peer, 1)
+	m := make([]*message, 0)
 
 	// peer[0] will always be the local peer
 	p[0] = newPeer("127.0.0.1", port)
 	fmt.Printf("userid: %v\n", p[0].userid[:8])
 
 	// create local circle
-	c := newCircle(p, "local")
-	c.peers[0].name = username
+	c := newCircle(p, m, "local")
+	if username != "" {
+		c.peers[0].userid = username
+	}
 
 	// connecting to peer?
 	if target != "" {
@@ -148,17 +152,19 @@ func (c *circle) listen() {
 			flag, _ := strconv.ParseBool(msg.cmdflag)
 			if !flag {
 				// simply print chat messages
+				c.msgs = append(c.msgs, msg)
 				fmt.Printf("%s > %s\n", msg.userid[:8], msg.body)
+				fmt.Printf("%v\n", len(c.msgs))
 
 			} else if flag {
 				// if command, send it to the command engine to handle
-				c.cmdEngine(msg, rlen, remote, listener)
+				c.cmdEngine(msg, remote, listener)
 			}
 		}
 	}
 }
 
-func (c *circle) cmdEngine(msg *message, rlen int, remote *net.UDPAddr, listener *net.UDPConn) {
+func (c *circle) cmdEngine(msg *message, remote *net.UDPAddr, listener *net.UDPConn) {
 	switch {
 	case strings.Contains(msg.body, "quit"):
 		// quit
@@ -198,19 +204,29 @@ func (c *circle) cmdEngine(msg *message, rlen int, remote *net.UDPAddr, listener
 			}
 
 			// this response should be a list of ips and ports for all peers BESIDES the currently connected peer and the local peer
-			listener.WriteTo([]byte(c.peers[0].userid+dilimeter+strconv.FormatBool(true)+dilimeter+strings.Join(peerlist, ",")), remote)
+			listener.WriteTo([]byte(c.peers[0].userid+delimiter+strconv.FormatBool(true)+delimiter+strings.Join(peerlist, ",")), remote)
 			fmt.Printf("sent peerlist: %s\n", strings.Join(peerlist, ","))
 		} else {
 			// no peers besides the two talking to each other now, send nil peerlist
-			listener.WriteTo([]byte(c.peers[0].userid+dilimeter+strconv.FormatBool(true)+dilimeter+"nil"), remote)
+			listener.WriteTo([]byte(c.peers[0].userid+delimiter+strconv.FormatBool(true)+delimiter+"nil"), remote)
 		}
 
 		// parse out the port from message... this will get removed with standard struct
 		remotePort, _ := strconv.Atoi(msg.body)
 
 		// check if the peer exists before adding it to the circle
-		if c.peerExists(msg.userid) == -1 {
+		index := c.peerExists(msg.userid)
+		if index == -1 {
 			c.peers = append(c.peers, addPeer(msg.userid, remote.IP.String(), remotePort))
+		} else {
+			fmt.Println("sending offline messages")
+			// convert c.msgs in strings
+			client, _ := net.DialUDP("udp", nil, c.peers[index].addr)
+			for _, item := range c.msgs {
+				// send them missed messages
+				client.Write([]byte(item.userid + delimiter + item.cmdflag + delimiter + item.body))
+			}
+			client.Close()
 		}
 	}
 }
@@ -228,7 +244,7 @@ func (c *circle) connect() {
 	buff := strconv.Itoa(c.peers[0].addr.Port)
 
 	// send message struct format, buff is port
-	client.Write([]byte(c.peers[0].userid + dilimeter + strconv.FormatBool(true) + dilimeter + buff))
+	client.Write([]byte(c.peers[0].userid + delimiter + strconv.FormatBool(true) + delimiter + buff))
 
 	// receive list of peers
 	var readbuff [1024]byte
@@ -253,7 +269,7 @@ func (c *circle) connect() {
 
 				// let added peer know we added them
 				client2, _ := net.DialUDP("udp", nil, c.peers[len(c.peers)-1].addr)
-				client2.Write([]byte(c.peers[0].userid + dilimeter + strconv.FormatBool(true) + dilimeter + buff))
+				client2.Write([]byte(c.peers[0].userid + delimiter + strconv.FormatBool(true) + delimiter + buff))
 				client2.Close()
 			}
 		}
@@ -285,28 +301,31 @@ func (c *circle) chat() {
 		for _, peer := range c.peers[1:] {
 			client, _ := net.DialUDP("udp", nil, peer.addr)
 
+			// if this is a quit command
 			if strings.Contains(string(buffer), "/quit") {
-				if !peer.isIdle() {
-					// send message struct with userid -> receiver should look up peer to remove via userid and should not need port
-					client.Write([]byte(c.peers[0].userid + dilimeter + strconv.FormatBool(true) + dilimeter + "/quit"))
-				}
+				peer.clientWrite(client, c.peers[0].userid, "/quit", true)
+
+				// else if this is a just message
 			} else {
-				if !peer.isIdle() {
-					var user string
-					if c.peers[0].name == "" {
-						user = c.peers[0].userid
-					} else {
-						user = c.peers[0].name
-					}
-					// send message struct format
-					client.Write([]byte(user + dilimeter + strconv.FormatBool(false) + dilimeter + buffer))
-				}
+				peer.clientWrite(client, c.peers[0].userid, buffer, false)
 			}
 			client.Close()
 		}
 		if strings.Contains(string(buffer), "/quit") {
 			return
 		}
+	}
+}
+
+// every peer needs to maintain a list of messages
+// so that when a client disconnects but shows up again I can send them a list of messages
+
+// general client send
+// send the same message structure each time
+// userid, cmdflag, message
+func (p *peer) clientWrite(client *net.UDPConn, userid, msg string, flag bool) {
+	if !p.isIdle() {
+		client.Write([]byte(userid + delimiter + strconv.FormatBool(flag) + delimiter + msg))
 	}
 }
 
@@ -324,7 +343,7 @@ func (c *circle) heartbeat() {
 			client, _ := net.DialUDP("udp", nil, peer.addr)
 
 			// send message struct format
-			client.Write([]byte(c.peers[0].userid + dilimeter + strconv.FormatBool(true) + dilimeter + "/heartbeat"))
+			peer.clientWrite(client, c.peers[0].userid, "/heartbeat", true)
 			client.Close()
 		}
 		time.Sleep(5 * time.Minute)
