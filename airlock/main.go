@@ -5,8 +5,10 @@ import "fmt"
 import "net"
 import "log"
 import "time"
+import "bytes"
 import "crypto/sha256"
 import "encoding/base64"
+import "encoding/binary"
 import "strings"
 import "strconv"
 import "bufio"
@@ -58,12 +60,20 @@ type message struct {
 	body    string
 }
 
-func newMessage(buffer string) *message {
-	msg := strings.Split(buffer, delimiter)
+// parse messages from recieved byte arrays
+func parseMessage(buff []byte) *message {
+	msg := &message{}
+	reader := bytes.NewReader(buff)
+	binary.Read(reader, binary.BigEndian, &msg)
+	return msg
+}
+
+// TODO: create a method to create messages to send
+func packMessage(id string, flag bool, buffer string) *message {
 	return &message{
-		userid:  msg[0],
-		cmdflag: msg[1],
-		body:    msg[2],
+		userid:  id,
+		cmdflag: strconv.FormatBool(flag),
+		body:    buffer,
 	}
 }
 
@@ -99,7 +109,7 @@ func main() {
 
 	// peer[0] will always be the local peer
 	p[0] = newPeer("127.0.0.1", port)
-	fmt.Printf("userid: %v\n", p[0].userid[:8])
+	fmt.Printf("userid: %v\n", p[0].userid[:])
 
 	// create local circle
 	c := newCircle(p, m, "local")
@@ -145,8 +155,11 @@ func (c *circle) listen() {
 			log.Print("Failed to read from socket: ", err)
 		} else {
 			// create struct with string from []byte buffer with length specified by the length of data sent to the udp listener
-			msg := newMessage(string(buff[:rlen]))
-			fmt.Printf("recieved userid: %v\n", msg.userid)
+			msg := parseMessage(buff[:rlen])
+			fmt.Printf("received buffer: %v\n", string(buff[:rlen]))
+			fmt.Printf("received length: %v\n", rlen)
+			fmt.Printf("received msg struct: %v\n", msg)
+			fmt.Printf("received msg: %s %s %v\n", msg.userid, msg.body, msg.cmdflag)
 
 			// decide if the message is a chat message, or command to be processed by the system
 			flag, _ := strconv.ParseBool(msg.cmdflag)
@@ -222,11 +235,14 @@ func (c *circle) cmdEngine(msg *message, remote *net.UDPAddr, listener *net.UDPC
 		} else {
 			fmt.Println("sending offline messages")
 			// convert c.msgs in strings
-			// TODO: this executes but the receiving end doesn't get anything. is the client correct?? is the message correct? should probably print these out to make sure
+			// BUG: this executes but the receiving end doesn't get anything. is the client correct?? is the message correct? should probably print these out to make sure
 			client, _ := net.DialUDP("udp", nil, c.peers[index].addr)
 			for _, item := range c.msgs {
 				// send them missed messages
-				client.Write([]byte(item.userid + delimiter + item.cmdflag + delimiter + item.body))
+				//client.Write([]byte(item.userid + delimiter + item.cmdflag + delimiter + item.body))
+				// BUG: this will not preserve the names of the original sender, should send whole message struct instead of body
+				// TODO: this will also check if the peer exists twice? is that an issue?.. probably want to have a move this to a different command
+				c.clientWrite(client, c.peers[index].userid, item.body, false)
 			}
 			client.Close()
 		}
@@ -246,12 +262,13 @@ func (c *circle) connect() {
 	buff := strconv.Itoa(c.peers[0].addr.Port)
 
 	// send message struct format, buff is port
-	client.Write([]byte(c.peers[0].userid + delimiter + strconv.FormatBool(true) + delimiter + buff))
+	//client.Write([]byte(c.peers[0].userid + delimiter + strconv.FormatBool(true) + delimiter + buff))
+	c.clientWrite(client, c.peers[1].userid, buff, true)
 
 	// receive list of peers
 	var readbuff [1024]byte
 	n, _ := client.Read(readbuff[:])
-	msg := newMessage(string(readbuff[:n]))
+	msg := parseMessage(readbuff[:n])
 
 	// save peers to own circle
 	fmt.Printf("received peerlist: '%s' %v bytes\n", msg.body, n)
@@ -272,7 +289,8 @@ func (c *circle) connect() {
 
 				// let added peer know we added them
 				client2, _ := net.DialUDP("udp", nil, c.peers[len(c.peers)-1].addr)
-				client2.Write([]byte(c.peers[0].userid + delimiter + strconv.FormatBool(true) + delimiter + buff))
+				//client2.Write([]byte(c.peers[0].userid + delimiter + strconv.FormatBool(true) + delimiter + buff))
+				c.clientWrite(client2, c.peers[len(c.peers)-1].userid, buff, true)
 				client2.Close()
 			}
 		}
@@ -304,13 +322,11 @@ func (c *circle) chat() {
 		for _, peer := range c.peers[1:] {
 			client, _ := net.DialUDP("udp", nil, peer.addr)
 
-			// if this is a quit command
+			// if this is a quit command, else this is a just message
 			if strings.Contains(string(buffer), "/quit") {
-				peer.clientWrite(client, c.peers[0].userid, "/quit", true)
-
-				// else if this is a just message
+				c.clientWrite(client, peer.userid, "/quit", true)
 			} else {
-				peer.clientWrite(client, c.peers[0].userid, buffer, false)
+				c.clientWrite(client, peer.userid, buffer, false)
 			}
 			client.Close()
 		}
@@ -320,15 +336,33 @@ func (c *circle) chat() {
 	}
 }
 
-// every peer needs to maintain a list of messages
-// so that when a client disconnects but shows up again I can send them a list of messages
-
-// general client send
-// send the same message structure each time
+// general client send the same message structure each time
 // userid, cmdflag, message
-func (p *peer) clientWrite(client *net.UDPConn, userid, msg string, flag bool) {
-	if !p.isIdle() {
-		client.Write([]byte(userid + delimiter + strconv.FormatBool(flag) + delimiter + msg))
+// TODO: pass in the whole peer struct instead of sending userid
+// TODO: UDPDial within clientWrite and close it when done
+// BUG: the receiving end doesn't get squat
+func (c *circle) clientWrite(client *net.UDPConn, userid, buffer string, flag bool) {
+	i := c.peerExists(userid)
+
+	// check if the peer exists and if they are idle before sending to them
+	if i != -1 && !c.peers[i].isIdle() {
+		msg := packMessage(userid, flag, buffer)
+
+		var buff bytes.Buffer
+
+		// BUG: this does not encode the msg struct as expected... wat the hek
+		binary.Write(&buff, binary.BigEndian, msg)
+
+		// add sent message to the offline messages ledger
+		c.msgs = append(c.msgs, msg)
+
+		// send message struct
+		fmt.Printf("original buffer: %v\n", buffer)
+		fmt.Printf("sent msg struct: %v\n", msg)
+		fmt.Printf("sent message: %s %s %s\n", msg.userid, msg.cmdflag, msg.body)
+		fmt.Printf("sent buffer: %v\n", buff)
+		fmt.Printf("sent buffer.Bytes(): %v\n", buff.Bytes())
+		client.Write(buff.Bytes())
 	}
 }
 
@@ -346,7 +380,7 @@ func (c *circle) heartbeat() {
 			client, _ := net.DialUDP("udp", nil, peer.addr)
 
 			// send message struct format
-			peer.clientWrite(client, c.peers[0].userid, "/heartbeat", true)
+			c.clientWrite(client, peer.userid, "/heartbeat", true)
 			client.Close()
 		}
 		time.Sleep(5 * time.Minute)
