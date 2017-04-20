@@ -335,6 +335,7 @@ func (c *circle) chat() {
 // TODO: UDPDial within clientWrite and close it when done
 // NOTE: initiating the client and destroying it the scope of a write does not work when responses are given to an active UDPConn
 // TODO: allow this clientWrite to take optionally take a remote address and call WriteTo(message, remote)
+// TODO: to allow for sending of a slice of structs, need to accept interface{} type instead of string
 func (c *circle) clientWrite(client *net.UDPConn, userid, buffer string, flag bool) {
 	i := c.peerExists(userid)
 
