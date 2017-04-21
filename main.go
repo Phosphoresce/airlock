@@ -1,17 +1,21 @@
 package main
 
-import "os"
-import "fmt"
-import "net"
-import "log"
-import "time"
-import "bytes"
-import "crypto/sha256"
-import "encoding/base64"
-import "encoding/gob"
-import "strings"
-import "strconv"
-import "bufio"
+import (
+	"bufio"
+	"bytes"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/gob"
+	"fmt"
+	"github.com/lxn/walk"
+	ui "github.com/lxn/walk/declarative"
+	"log"
+	"net"
+	"os"
+	"strconv"
+	"strings"
+	"time"
+)
 
 type circle struct {
 	peers []*peer
@@ -78,6 +82,9 @@ func packMessage(id string, flag bool, buffer string) *message {
 
 const delimiter = "\x1f"
 
+var inText *walk.TextEdit
+var outText *walk.LineEdit
+
 func main() {
 	fmt.Println("Hello, Airlock!")
 
@@ -128,8 +135,31 @@ func main() {
 	}
 
 	// execute main listener and chat function
+
 	go c.listen()
-	c.chat()
+
+	ui.MainWindow{
+		Title:   "Airlock",
+		MinSize: ui.Size{600, 400},
+		Layout:  ui.VBox{},
+		Children: []ui.Widget{
+			ui.TextEdit{
+				AssignTo: &inText,
+				ReadOnly: true,
+			},
+			ui.LineEdit{
+				AssignTo: &outText,
+			},
+			ui.PushButton{
+				Text: "Send",
+				OnClicked: func() {
+					c.uiChat(outText.Text())
+					outText.SetText("")
+				},
+			},
+		},
+	}.Run()
+	//c.chat()
 }
 
 // incoming connections should create a new peer and send an updated peer list
@@ -164,6 +194,7 @@ func (c *circle) listen() {
 				c.msgs = append(c.msgs, msg)
 				fmt.Printf("%s > %s\n", msg.Userid[:8], msg.Body)
 				fmt.Printf("%v\n", len(c.msgs))
+				inText.SetText(msg.Userid[:8] + " > " + msg.Body)
 
 			} else if flag && rlen != 0 {
 				// if command, send it to the command engine to handle
@@ -326,6 +357,25 @@ func (c *circle) chat() {
 		if strings.Contains(string(buffer), "/quit") {
 			return
 		}
+	}
+}
+
+// Send a message to all peers besides self
+func (c *circle) uiChat(buffer string) {
+	// send message to all peers
+	for _, peer := range c.peers[1:] {
+		client, _ := net.DialUDP("udp", nil, peer.addr)
+
+		// if this is a quit command, else this is a just message
+		if strings.Contains(buffer, "/quit") {
+			c.clientWrite(client, peer.Userid, "/quit", true)
+		} else {
+			c.clientWrite(client, peer.Userid, buffer, false)
+		}
+		client.Close()
+	}
+	if strings.Contains(buffer, "/quit") {
+		return
 	}
 }
 
