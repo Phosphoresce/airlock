@@ -17,13 +17,22 @@ import (
 	"time"
 )
 
-type circle struct {
+type Circle struct {
 	peers []*peer
 	msgs  []*message
-	name  string
 }
 
-func newCircle(peers []*peer, msgs []*message, name string) *circle { return &circle{peers, msgs, name} }
+func NewCircle() *Circle {
+	circle := &Circle{
+		peers: make([]*peer, 0),
+		msgs:  make([]*message, 0),
+		//incoming chan Message
+		//outgoing chan Message
+	}
+
+	go circle.listen()
+	return circle
+}
 
 type peer struct {
 	addr *net.UDPAddr
@@ -92,6 +101,7 @@ func main() {
 	var target string
 	username := ""
 	port := 9001
+	gui := false
 
 	// process args
 	args := os.Args[1:]
@@ -106,19 +116,19 @@ func main() {
 		case "-u", "--username":
 			username = args[x+1]
 			x++
+		case "-g", "--gui":
+			gui = true
 		}
 	}
 
-	// create structs
-	p := make([]*peer, 1)
-	m := make([]*message, 0)
-
-	// peer[0] will always be the local peer
-	p[0] = newPeer("127.0.0.1", port)
-	fmt.Printf("userid: %v\n", p[0].Userid[:])
-
 	// create local circle
-	c := newCircle(p, m, "local")
+	c := NewCircle()
+
+	// append peer to circle
+	c.peers = append(c.peers, newPeer("127.0.0.1", port))
+	fmt.Printf("userid: %v\n", c.peers[0].Userid[:])
+
+	// crudely set username
 	if username != "" {
 		c.peers[0].Userid = username
 	}
@@ -134,36 +144,36 @@ func main() {
 		c.connect()
 	}
 
-	// execute main listener and chat function
-
-	go c.listen()
-
-	ui.MainWindow{
-		Title:   "Airlock",
-		MinSize: ui.Size{600, 400},
-		Layout:  ui.VBox{},
-		Children: []ui.Widget{
-			ui.TextEdit{
-				AssignTo: &inText,
-				ReadOnly: true,
-			},
-			ui.LineEdit{
-				AssignTo: &outText,
-			},
-			ui.PushButton{
-				Text: "Send",
-				OnClicked: func() {
-					c.uiChat(outText.Text())
-					outText.SetText("")
+	// execute gui or terminal chat
+	if gui {
+		ui.MainWindow{
+			Title:   "Airlock",
+			MinSize: ui.Size{600, 400},
+			Layout:  ui.VBox{},
+			Children: []ui.Widget{
+				ui.TextEdit{
+					AssignTo: &inText,
+					ReadOnly: true,
+				},
+				ui.LineEdit{
+					AssignTo: &outText,
+				},
+				ui.PushButton{
+					Text: "Send",
+					OnClicked: func() {
+						c.uiChat(outText.Text())
+						outText.SetText("")
+					},
 				},
 			},
-		},
-	}.Run()
-	//c.chat()
+		}.Run()
+	} else {
+		c.chat()
+	}
 }
 
 // incoming connections should create a new peer and send an updated peer list
-func (c *circle) listen() {
+func (c *Circle) listen() {
 	// set up udp listener
 	listener, err := net.ListenUDP("udp", c.peers[0].addr)
 	if err != nil {
@@ -204,7 +214,7 @@ func (c *circle) listen() {
 	}
 }
 
-func (c *circle) cmdEngine(msg *message, remote *net.UDPAddr, listener *net.UDPConn) {
+func (c *Circle) cmdEngine(msg *message, remote *net.UDPAddr, listener *net.UDPConn) {
 	switch {
 	case strings.Contains(msg.Body, "quit"):
 		// quit
@@ -276,7 +286,7 @@ func (c *circle) cmdEngine(msg *message, remote *net.UDPAddr, listener *net.UDPC
 }
 
 // outgoing connections should create a new peer from specified target and receive target's peer list
-func (c *circle) connect() {
+func (c *Circle) connect() {
 	// create udp client
 	client, err := net.DialUDP("udp", nil, c.peers[1].addr)
 	if err != nil {
@@ -323,7 +333,7 @@ func (c *circle) connect() {
 }
 
 // check for peer in peerlist
-func (c *circle) peerExists(userid string) int {
+func (c *Circle) peerExists(userid string) int {
 	for i, peer := range c.peers {
 		if peer.Userid == userid {
 			return i
@@ -333,7 +343,7 @@ func (c *circle) peerExists(userid string) int {
 }
 
 // Send a message to all peers besides self
-func (c *circle) chat() {
+func (c *Circle) chat() {
 	// create scanner
 	scanner := bufio.NewScanner(os.Stdin)
 
@@ -361,7 +371,7 @@ func (c *circle) chat() {
 }
 
 // Send a message to all peers besides self
-func (c *circle) uiChat(buffer string) {
+func (c *Circle) uiChat(buffer string) {
 	// send message to all peers
 	for _, peer := range c.peers[1:] {
 		client, _ := net.DialUDP("udp", nil, peer.addr)
@@ -386,7 +396,7 @@ func (c *circle) uiChat(buffer string) {
 // NOTE: initiating the client and destroying it the scope of a write does not work when responses are given to an active UDPConn
 // TODO: allow this clientWrite to take optionally take a remote address and call WriteTo(message, remote)
 // TODO: to allow for sending of a slice of structs, need to accept interface{} type instead of string
-func (c *circle) clientWrite(client *net.UDPConn, userid, buffer string, flag bool) {
+func (c *Circle) clientWrite(client *net.UDPConn, userid, buffer string, flag bool) {
 	i := c.peerExists(userid)
 
 	// check if the peer exists and if they are idle before sending to them
@@ -407,7 +417,7 @@ func (c *circle) clientWrite(client *net.UDPConn, userid, buffer string, flag bo
 	}
 }
 
-func (c *circle) clientWriteTo(client *net.UDPConn, userid, buffer string, flag bool, remote *net.UDPAddr) {
+func (c *Circle) clientWriteTo(client *net.UDPConn, userid, buffer string, flag bool, remote *net.UDPAddr) {
 	msg := packMessage(userid, flag, buffer)
 
 	var buff bytes.Buffer
@@ -429,7 +439,7 @@ func (p *peer) isIdle() bool {
 	return time.Since(p.time) > (10 * time.Minute)
 }
 
-func (c *circle) heartbeat() {
+func (c *Circle) heartbeat() {
 	// want to send a control message at a designated interval
 	// timer 5 minutes
 	for {
