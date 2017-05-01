@@ -222,8 +222,6 @@ func (c *Circle) listen() {
 				// simply print chat messages
 				c.msgs = append(c.msgs, msg)
 				fmt.Printf("%s > %s\n", msg.Userid[:8], msg.Body)
-				fmt.Printf("%v\n", len(c.msgs))
-				//inText.SetText(msg.Userid[:8] + " > " + msg.Body)
 				text.Append(msg.Userid[:8] + " > " + msg.Body)
 
 			} else if flag && rlen != 0 {
@@ -264,7 +262,7 @@ func (c *Circle) cmdEngine(msg *message, remote *net.UDPAddr, listener *net.UDPC
 		fmt.Printf("new connect from %v\n", remote)
 
 		// this is a new connect, check to see if we need to send a peerlist
-		if len(c.peers) > 1 {
+		if len(c.peers[1:]) > 0 {
 			fmt.Println("Sending peers")
 			// build the peer list to send
 			peerlist := make([]string, 0)
@@ -278,12 +276,12 @@ func (c *Circle) cmdEngine(msg *message, remote *net.UDPAddr, listener *net.UDPC
 			}
 
 			// this response should be a list of ips and ports for all peers BESIDES the currently connected peer and the local peer
-			c.clientWriteTo(listener, msg.Userid, strings.Join(peerlist, ","), false, remote)
+			c.clientWriteTo(listener, strings.Join(peerlist, ","), false, remote)
 			fmt.Printf("sent peerlist: %s\n", strings.Join(peerlist, ","))
 		} else {
 			fmt.Println("Sending no peers")
 			// no peers besides the two talking to each other now, send nil peerlist
-			c.clientWriteTo(listener, msg.Userid, "nil", true, remote)
+			c.clientWriteTo(listener, "nil", true, remote)
 		}
 
 		// parse out the port from message... this will get removed with standard struct
@@ -299,7 +297,7 @@ func (c *Circle) cmdEngine(msg *message, remote *net.UDPAddr, listener *net.UDPC
 				// send them missed messages
 				// BUG: this will not preserve the names of the original sender, should send whole message struct instead of body
 				// TODO: this will also check if the peer exists twice? is that an issue?.. probably want to have a move this to a different command
-				c.clientWriteTo(listener, msg.Userid, item.Body, false, remote)
+				c.clientWriteTo(listener, item.Body, false, remote)
 			}
 		}
 	}
@@ -405,7 +403,7 @@ func (c *Circle) uiChat(buffer string) {
 		client.Close()
 	}
 	if strings.Contains(buffer, "/quit") {
-		return
+		os.Exit(0)
 	}
 }
 
@@ -421,7 +419,8 @@ func (c *Circle) clientWrite(client *net.UDPConn, userid, buffer string, flag bo
 
 	// check if the peer exists and if they are idle before sending to them
 	if i != -1 && !c.peers[i].isIdle() {
-		msg := packMessage(userid, flag, buffer)
+		// BUG: should be packing message with your own userid not who you are sending to
+		msg := packMessage(c.peers[0].Userid, flag, buffer)
 
 		var buff bytes.Buffer
 
@@ -430,6 +429,7 @@ func (c *Circle) clientWrite(client *net.UDPConn, userid, buffer string, flag bo
 		gob.NewEncoder(&buff).Encode(&msg)
 
 		// add sent message to the offline messages ledger
+		// TODO: only save messages that are not commands
 		c.msgs = append(c.msgs, msg)
 
 		// send message struct
@@ -437,8 +437,8 @@ func (c *Circle) clientWrite(client *net.UDPConn, userid, buffer string, flag bo
 	}
 }
 
-func (c *Circle) clientWriteTo(client *net.UDPConn, userid, buffer string, flag bool, remote *net.UDPAddr) {
-	msg := packMessage(userid, flag, buffer)
+func (c *Circle) clientWriteTo(client *net.UDPConn, buffer string, flag bool, remote *net.UDPAddr) {
+	msg := packMessage(c.peers[0].Userid, flag, buffer)
 
 	var buff bytes.Buffer
 

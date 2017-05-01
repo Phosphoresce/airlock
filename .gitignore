@@ -2,3 +2,6 @@
 deploy
 qml
 rcc*
+linux
+windows
+android
