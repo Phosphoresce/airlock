@@ -16,8 +16,18 @@ stat:
 noterm:
 	$(GOC) -ldflags="-H windowsgui"
 
+qt:
+	${GOPATH}/bin/qtdeploy -docker test desktop
+
+qtfast:
+	${GOPATH}/bin/qtdeploy -docker -fast test desktop
+
 fmt:
 	gofmt -w .
 
 clean:
 	rm airlock.exe
+
+qtclean:
+	sudo rm -r deploy qml
+	sudo rm rcc*

@@ -7,8 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/gob"
 	"fmt"
-	"github.com/lxn/walk"
-	ui "github.com/lxn/walk/declarative"
+	"github.com/therecipe/qt/widgets"
 	"log"
 	"net"
 	"os"
@@ -89,10 +88,7 @@ func packMessage(id string, flag bool, buffer string) *message {
 	}
 }
 
-const delimiter = "\x1f"
-
-var inText *walk.TextEdit
-var outText *walk.LineEdit
+var text *widgets.QTextEdit
 
 func main() {
 	fmt.Println("Hello, Airlock!")
@@ -146,27 +142,50 @@ func main() {
 
 	// execute gui or terminal chat
 	if gui {
-		ui.MainWindow{
-			Title:   "Airlock",
-			MinSize: ui.Size{600, 400},
-			Layout:  ui.VBox{},
-			Children: []ui.Widget{
-				ui.TextEdit{
-					AssignTo: &inText,
-					ReadOnly: true,
-				},
-				ui.LineEdit{
-					AssignTo: &outText,
-				},
-				ui.PushButton{
-					Text: "Send",
-					OnClicked: func() {
-						c.uiChat(outText.Text())
-						outText.SetText("")
-					},
-				},
-			},
-		}.Run()
+		// create widget based qt gui
+		widgets.NewQApplication(len(os.Args), os.Args)
+
+		// create a window
+		window := widgets.NewQMainWindow(nil, 0)
+		window.SetWindowTitle("Airlock")
+		window.SetMinimumSize2(200, 200)
+
+		// create a layout
+		layout := widgets.NewQVBoxLayout()
+
+		// create a widget and set the layout
+		widget := widgets.NewQWidget(nil, 0)
+		widget.SetLayout(layout)
+
+		// create a textedit and add it to the layout
+		// temporarily set globally
+		text = widgets.NewQTextEdit(nil)
+		text.SetReadOnly(true)
+		layout.AddWidget(text, 0, 0)
+
+		// create a lineedit and add it to the layout
+		input := widgets.NewQLineEdit(nil)
+		input.SetPlaceholderText("1. write something")
+		layout.AddWidget(input, 0, 0)
+
+		// create a button and add it to the layout
+		button := widgets.NewQPushButton2("2. click me", nil)
+		button.ConnectClicked(func(checked bool) {
+			text.Append("me > " + input.Text())
+			c.uiChat(input.Text())
+			input.Clear()
+
+		})
+		layout.AddWidget(button, 0, 0)
+
+		// add the widget as the central widget to the window
+		window.SetCentralWidget(widget)
+
+		// show the window
+		window.Show()
+
+		// enter the main event loop
+		widgets.QApplication_Exec()
 	} else {
 		c.chat()
 	}
@@ -204,7 +223,8 @@ func (c *Circle) listen() {
 				c.msgs = append(c.msgs, msg)
 				fmt.Printf("%s > %s\n", msg.Userid[:8], msg.Body)
 				fmt.Printf("%v\n", len(c.msgs))
-				inText.SetText(msg.Userid[:8] + " > " + msg.Body)
+				//inText.SetText(msg.Userid[:8] + " > " + msg.Body)
+				text.Append(msg.Userid[:8] + " > " + msg.Body)
 
 			} else if flag && rlen != 0 {
 				// if command, send it to the command engine to handle
