@@ -97,7 +97,7 @@ func main() {
 	var target string
 	username := ""
 	port := 9001
-	gui := false
+	gui := true
 
 	// process args
 	args := os.Args[1:]
@@ -113,7 +113,7 @@ func main() {
 			username = args[x+1]
 			x++
 		case "-g", "--gui":
-			gui = true
+			gui = false
 		}
 	}
 
