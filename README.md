@@ -153,7 +153,7 @@ To build from source with the GUI start with the basic instructions for installi
 1. Make sure you have Docker installed and make sure your user is in the Docker group:
   `sudo pacman -S docker && sudo usermod -G docker <your user>`
 2. Pull a docker container with the compile time requirements:
-  `docker pull therecipe/qt:windows_64_static` or `docker pull therecipe/qt:linux` or `docker pull therecipe/qt:android`
+  `docker pull therecipe/qt:windows_32_shared` or `docker pull therecipe/qt:linux` or `docker pull therecipe/qt:android`
 3. Follow the instructions posted [here](https://github.com/therecipe/qt/blob/master/README.md#minimal-setup).
 3. Use the makefile to build the project for your operating system:
   `make qt`
