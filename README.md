@@ -45,7 +45,7 @@ If something isn't hashed out to the point of testable and verifiable requiremen
 Do not try to implement a feature without specifying testable and verifiable requirements! I will not accept the pull request if you cannot tell me what it is supposed to accomplish and how I am supposed to test and verify it.
 
 #### User Stories
-1. Connect to peers from direct IP (Ready for development)
+1. Connect to peers from direct IP (Roughly implemented)
   - Connect to a circle ([#1](https://github.com/Phosphoresce/airlock/issues/1))
     - If a peer is the first in the circle wait for incoming connections from other peers
     - If a peer is not the first in the circle request to join the circle
@@ -61,8 +61,8 @@ Do not try to implement a feature without specifying testable and verifiable req
     - Each peer will send a keep-alive every specified interval
     - Each peer must remove other inactive peers
     - Each peer will broadcast a disconnect voluntarily leaving
-  - Detect peers on your network ([#5](https://github.com/Phosphoresce/airlock/issues/5))
-    - If a peer hasn't specified a target, try to detect peers on their network
+  - ~~Detect peers on your network ([#5](https://github.com/Phosphoresce/airlock/issues/5))~~
+    - ~~If a peer hasn't specified a target, try to detect peers on their network~~
   
 2. Establish encryption from the start (Partially ready)
   - Each peer must create an identity key and associate it with their username
@@ -72,7 +72,7 @@ Do not try to implement a feature without specifying testable and verifiable req
     - X3DH? 
     - Double Ratchet?
   
-3. Send messages (Partially ready)
+3. Send messages (Partially implemented)
   - Personal message
     - Peers must send all individual messages to another peer encrypted with the receivers public pre-key
     - The participating peers must establish a shared key
@@ -94,7 +94,8 @@ Do not try to implement a feature without specifying testable and verifiable req
   - Documents
     - Peer hosts the file
     - Both peers access hosted file via API ( read file, append, insert )
-5. UI/UX
+5. UI/UX (Roughly Implemented)
+  - QT5 for cross compiling
   - Terminal
   - GUI
   - web app  
@@ -136,6 +137,45 @@ Go [here](https://www.lucidchart.com/invitations/accept/6e66a31a-8f6d-4d0d-875f-
 |---|---|---|---|
 | Distributed encryption research | no | Me | Need some whitepapers and research for distributed peer2peer encryption |
 | UI/UX Experience | no | Me | Will need to look into UI frameworks, and decide on ways to present this application to users |
+
+## Installation
+To use Airlock you can either build from source or use one of the provided libraries for Microsoft Windows 64 bit, Linux 64 bit, or Android.  
+
+To build from source without the GUI follow the basic instructions in the [contributing document](CONTRIBUTING.md).
+The basic steps are to:
+1. Install Golang
+2. Clone the repository
+3. `cd airlock`
+4. `go install` or `go build`
+
+To build from source with the GUI start with the basic instructions for installing without a GUI but then continue below:
+
+1. Make sure you have Docker installed and make sure your user is in the Docker group:
+  `sudo pacman -S docker && sudo usermod -G docker <your user>`
+2. Pull a docker container with the compile time requirements:
+  `docker pull therecipe/qt:windows_64_static` or `docker pull therecipe/qt:linux` or `docker pull therecipe/qt:android`
+3. Use the makefile to build the project for your operating system:
+  `make qt`
+4. Alternatively, build the project for another operating system (you must pull the appropriate docker container):
+  ${GOPATH}/bin/qtdeploy -docker test android
+5. The resulting built project will be located in the deploy directory under the target operating system name. For example: `airlock/deploy/linux/...`
+  
+## Getting Started
+To run Airlock gui:
+- Microsoft Windows: Double click the `airlock.exe`
+- Linux: run airlock.sh
+- Android: Tap the app icon
+
+By default, the application will launch a chat Window and listen on port `9001` for messages from other peers.  
+
+To connect to a peer you must specify a target and port to listen on from the command line: `airlock.sh -t localhost:9001 -p 9002`
+
+```
+Usage: airlock [-tpg]
+-t --target Connects to the specified domain or ip address and port pair
+-p --port   Specifies a custom port to listen for messages on
+-g --gui    A boolean flag to enable or disable GUI
+```
 
 ## Terms
 These terms are not set in stone, but for the moment I have chosen to use bitTorrent-like terminology to keep things simple
