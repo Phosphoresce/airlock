@@ -139,10 +139,10 @@ Go [here](https://www.lucidchart.com/invitations/accept/6e66a31a-8f6d-4d0d-875f-
 | UI/UX Experience | no | Me | Will need to look into UI frameworks, and decide on ways to present this application to users |
 
 ## Installation
-To use Airlock you can either build from source or use one of the provided libraries for Microsoft Windows 64 bit, Linux 64 bit, or Android.  
+To use Airlock you must build it from source.  
 
 To build from source without the GUI follow the basic instructions in the [contributing document](CONTRIBUTING.md).
-The basic steps are to:
+The basic steps are:
 1. Install Golang
 2. Clone the repository
 3. `cd airlock`
@@ -154,17 +154,19 @@ To build from source with the GUI start with the basic instructions for installi
   `sudo pacman -S docker && sudo usermod -G docker <your user>`
 2. Pull a docker container with the compile time requirements:
   `docker pull therecipe/qt:windows_64_static` or `docker pull therecipe/qt:linux` or `docker pull therecipe/qt:android`
+3. Follow the instructions posted [here](https://github.com/therecipe/qt/blob/master/README.md#minimal-setup).
 3. Use the makefile to build the project for your operating system:
   `make qt`
 4. Alternatively, build the project for another operating system (you must pull the appropriate docker container):
-  ${GOPATH}/bin/qtdeploy -docker test android
+  ${GOPATH}/bin/qtdeploy -docker build android
 5. The resulting built project will be located in the deploy directory under the target operating system name. For example: `airlock/deploy/linux/...`
   
 ## Getting Started
 To run Airlock gui:
 - Microsoft Windows: Double click the `airlock.exe`
 - Linux: run airlock.sh
-- Android: Tap the app icon
+- Android: `abd install build-debug.apk` then Tap the 'go' app icon on your phone.
+  Note: You must have the android developer toolkit installed to install apks to an android device. Your phone must also be plugged into the computer.  
 
 By default, the application will launch a chat Window and listen on port `9001` for messages from other peers.  
 
