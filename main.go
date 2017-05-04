@@ -320,11 +320,19 @@ func (c *Circle) connect() {
 
 	// receive list of peers
 	var readbuff [1024]byte
-	n, _ := client.Read(readbuff[:])
+	n, err := client.Read(readbuff[:])
+	if err != nil {
+		log.Fatal("Failed to read from network: ", err)
+	}
 	msg := parseMessage(readbuff[:n])
 
 	// save peers to own circle
 	fmt.Printf("received peerlist: '%s' %v bytes\n", msg.Body, n)
+	if msg.Body == "" {
+		fmt.Printf("recieved nothing, try again.")
+		n, _ = client.Read(readbuff[:])
+		msg = parseMessage(readbuff[:n])
+	}
 	if msg.Body != "nil" {
 		// split out peers in list
 		peerlist := strings.Split(msg.Body, ",")
